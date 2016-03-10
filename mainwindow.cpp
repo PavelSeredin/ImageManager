@@ -51,12 +51,6 @@ void MainWindow::createActions()
     closeFileAct->setDisabled(1);
     connect(closeFileAct,SIGNAL(triggered()), this, SLOT(closeFile()));
 
-    deleteAct = new QAction(tr("Delete"),this);
-    deleteAct->setDisabled(1);
-
-    connect(deleteAct, SIGNAL(triggered()), this, SLOT(deleteImage()));
-
-
     saveFileAct = new QAction(tr("Save File"),this);
     saveFileAct->setDisabled(1);
     connect(saveFileAct, SIGNAL(triggered()), this, SLOT(saveImage()));
@@ -73,6 +67,10 @@ void MainWindow::createActions()
     closeFolderAct = new QAction(tr("Close Folder"),this);
     closeFolderAct->setDisabled(1);
     connect(closeFolderAct, SIGNAL(triggered()), this, SLOT(closeFolder()));
+
+    deleteAct = new QAction(tr("Delete File"),this);
+    deleteAct->setDisabled(1);
+    connect(deleteAct, SIGNAL(triggered()), this, SLOT(deleteFile()));
 
     exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcut(tr("Ctrl+Q"));
@@ -127,10 +125,10 @@ void MainWindow::createMenus()
     fileMenu->addAction(closeFileAct);
     fileMenu->addAction(saveFileAct);
     fileMenu->addAction(saveFileAsAct);
-    fileMenu->addAction(deleteAct);
     fileMenu->addSeparator();
     fileMenu->addAction(openFolderAct);
     fileMenu->addAction(closeFolderAct);
+    fileMenu->addAction(deleteAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
 
@@ -199,11 +197,6 @@ void MainWindow::closeFile()
 
 void MainWindow::deleteFile()
 {
-
-}
-
-void MainWindow::deleteImage()
-{
     if(QMessageBox::question(this, "Delete","Remove?",QMessageBox::Yes|QMessageBox::No)== QMessageBox::Yes)
     {
         QList<QListWidgetItem*> files = listWidget->selectedItems();
@@ -213,8 +206,15 @@ void MainWindow::deleteImage()
             QListWidgetItem* curItem = it.next();
             QFile curFile(curItem->data(Qt::UserRole).toString());
             delete curItem;
+            if(curFile.fileName()==windowFilePath())
+            {
+                setWindowFilePath(QString());
+                imageLabel->setPixmap(QPixmap());
+                imageLabel->adjustSize();
+            }
             curFile.remove();
         }
+
     }
     updateMenus();
 }
@@ -311,7 +311,6 @@ void MainWindow::updateMenus()
     closeFileAct->setEnabled(fileOpened);
     saveFileAct->setEnabled(fileChanged && fileOpened);
     saveFileAsAct->setEnabled(fileOpened);
-    deleteAct->setEnabled(fileOpened);
 
     openFolderAct->setEnabled(!folderOpened);
     closeFolderAct->setEnabled(folderOpened);

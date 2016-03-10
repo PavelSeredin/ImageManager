@@ -66,11 +66,10 @@ signals:
 private slots:
     void openFile();
     void closeFile();
-    void deleteFile();
     void saveImage();
     void saveAs();
 
-    void deleteImage();
+    void deleteFile();
     void openFolder();
     void closeFolder();
 
