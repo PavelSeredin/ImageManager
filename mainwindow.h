@@ -23,7 +23,8 @@ public:
 private:
     void createActions();
     void createMenus();
-    void updateActions();
+    void updateMenus();
+
     void scaleImage(double factor);
     void adjustScrollBar(QScrollBar *scrollBar, double factor);
 
@@ -33,13 +34,17 @@ private:
     QScrollArea *scrollArea;
     double scaleFactor;
     QImage *openedImage;
-    bool fileOpened,folderOpened;
+    bool fileOpened,folderOpened,fileChanged;
+    QStringList mimeTypeFilters;
+    QStringList picturesLocations;
 
-    QAction *openAct;
+    QAction *openFileAct;
     QAction *closeFileAct;
     QAction *deleteAct;
     QAction *openFolderAct;
     QAction *closeFolderAct;
+    QAction *saveFileAct;
+    QAction *saveFileAsAct;
     QAction *exitAct;
     QAction *zoomInAct;
     QAction *zoomOutAct;
@@ -59,17 +64,25 @@ private:
 signals:
 
 private slots:
-    void open();
+    void openFile();
+    void closeFile();
+    void deleteFile();
+    void saveImage();
+    void saveAs();
+
+    void deleteImage();
+    void openFolder();
+    void closeFolder();
+
     void zoomIn();
     void zoomOut();
     void normalSize();
     void fitToWindow();
     void showImage(QListWidgetItem* img);
-    void deleteImage();
+
     void resizeImage();
     void turnImage();
     void uniteImages();
-    void updateMenus();
 };
 
 #endif // MAINWINDOW_H

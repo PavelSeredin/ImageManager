@@ -12,11 +12,12 @@ public:
     //const int FilePath = 33;
     //const int Image = 34;
     explicit FilesList(QWidget *parent = 0);
+    const QString getFolder();
     ~FilesList();
 
 signals:
     void hasSelectedItems(bool);
-private slots:
+public slots:
     bool readFolder();
     void closeFolder();
     void upateSelectionSignal();

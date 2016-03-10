@@ -58,6 +58,11 @@ void FilesList::upateSelectionSignal()
     emit hasSelectedItems(!this->selectedItems().empty());
 }
 
+const QString FilesList::getFolder()
+{
+    return imagesFolder->absolutePath();
+}
+
 FilesList::~FilesList()
 {
 

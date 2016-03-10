@@ -6,6 +6,15 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
+    fileChanged=0;
+    fileOpened=0;
+    folderOpened=0;
+
+    foreach (const QByteArray &mimeTypeName, QImageReader::supportedMimeTypes())
+        mimeTypeFilters.append(mimeTypeName);
+    mimeTypeFilters.sort();
+    picturesLocations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
+
     listWidget = new FilesList();
 
     imageLabel = new QLabel;
@@ -32,94 +41,38 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     resize(QGuiApplication::primaryScreen()->availableSize() * 3 / 5);
 }
 
-bool MainWindow::loadFile(const QString &fileName)
-{
-    openedImage = new QImage(fileName);
-    if (openedImage->isNull()) {
-        QMessageBox::information(this, QGuiApplication::applicationDisplayName(),
-                                 tr("Cannot load %1.").arg(QDir::toNativeSeparators(fileName)));
-        setWindowFilePath(QString());
-        imageLabel->setPixmap(QPixmap());
-        imageLabel->adjustSize();
-        return false;
-    }
-    imageLabel->setPixmap(QPixmap::fromImage(*openedImage));
-    scaleFactor = 1.0;
-
-    fitToWindowAct->setEnabled(true);
-    updateActions();
-
-    if (!fitToWindowAct->isChecked())
-         imageLabel->adjustSize();
-
-    fileOpened=true;
-    updateMenus();
-    setWindowFilePath(fileName);
-    return true;
- }
-
-void MainWindow::open()
-{
-    QStringList mimeTypeFilters;
-    foreach (const QByteArray &mimeTypeName, QImageReader::supportedMimeTypes())
-        mimeTypeFilters.append(mimeTypeName);
-    mimeTypeFilters.sort();
-    const QStringList picturesLocations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
-    QFileDialog dialog(this, tr("Open File"),
-                       picturesLocations.isEmpty() ? QDir::currentPath() : picturesLocations.first());
-    dialog.setAcceptMode(QFileDialog::AcceptOpen);
-    dialog.setMimeTypeFilters(mimeTypeFilters);
-    dialog.selectMimeTypeFilter("image/jpeg");
-
-    while (dialog.exec() == QDialog::Accepted && !loadFile(dialog.selectedFiles().first())) {}
-}
-
-void MainWindow::zoomIn()
-{
-    scaleImage(1.25);
-}
-
-void MainWindow::zoomOut()
-{
-    scaleImage(0.8);
-}
-
-void MainWindow::normalSize()
-{
-    imageLabel->adjustSize();
-    scaleFactor = 1.0;
-}
-
-void MainWindow::fitToWindow()
-{
-    bool fitToWindow = fitToWindowAct->isChecked();
-    scrollArea->setWidgetResizable(fitToWindow);
-    if (!fitToWindow) {
-        normalSize();
-    }
-    updateActions();
-}
-
 void MainWindow::createActions()
 {
-    openAct = new QAction(tr("Open File"), this);
-    openAct->setShortcut(tr("Ctrl+O"));
-    connect(openAct, SIGNAL(triggered()), this, SLOT(open()));
+    openFileAct = new QAction(tr("Open File"), this);
+    openFileAct->setShortcut(tr("Ctrl+O"));
+    connect(openFileAct, SIGNAL(triggered()), this, SLOT(openFile()));
 
     closeFileAct = new QAction(tr("Close File"),this);
     closeFileAct->setDisabled(1);
+    connect(closeFileAct,SIGNAL(triggered()), this, SLOT(closeFile()));
 
     deleteAct = new QAction(tr("Delete"),this);
     deleteAct->setDisabled(1);
+
     connect(deleteAct, SIGNAL(triggered()), this, SLOT(deleteImage()));
+
+
+    saveFileAct = new QAction(tr("Save File"),this);
+    saveFileAct->setDisabled(1);
+    connect(saveFileAct, SIGNAL(triggered()), this, SLOT(saveImage()));
+
+    saveFileAsAct = new QAction(tr("Save File As"),this);
+    saveFileAsAct->setDisabled(1);
+    connect(saveFileAsAct, SIGNAL(triggered()), this, SLOT(saveAs()));
+
 
     openFolderAct = new QAction(tr("Open Folder"),this);
     openFolderAct->setShortcut(tr("Ctrl+F"));
-    connect(openFolderAct, SIGNAL(triggered()), listWidget, SLOT(readFolder()));
+    connect(openFolderAct, SIGNAL(triggered()), this, SLOT(openFolder()));
 
     closeFolderAct = new QAction(tr("Close Folder"),this);
     closeFolderAct->setDisabled(1);
-    connect(closeFolderAct, SIGNAL(triggered()), listWidget, SLOT(closeFolder()));
+    connect(closeFolderAct, SIGNAL(triggered()), this, SLOT(closeFolder()));
 
     exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcut(tr("Ctrl+Q"));
@@ -164,13 +117,16 @@ void MainWindow::createActions()
 
     connect(listWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(showImage(QListWidgetItem*)));
     connect(listWidget,SIGNAL(hasSelectedItems(bool)),uniteImagesAct,SLOT(setEnabled(bool)));
+    connect(listWidget,SIGNAL(hasSelectedItems(bool)),deleteAct,SLOT(setEnabled(bool)));
 }
 
 void MainWindow::createMenus()
 {
     fileMenu = new QMenu(tr("&File"), this);
-    fileMenu->addAction(openAct);
+    fileMenu->addAction(openFileAct);
     fileMenu->addAction(closeFileAct);
+    fileMenu->addAction(saveFileAct);
+    fileMenu->addAction(saveFileAsAct);
     fileMenu->addAction(deleteAct);
     fileMenu->addSeparator();
     fileMenu->addAction(openFolderAct);
@@ -201,37 +157,49 @@ void MainWindow::createMenus()
     menuBar()->addMenu(editMenu);
 }
 
-void MainWindow::updateActions()
+void MainWindow::openFile()
 {
-    zoomInAct->setEnabled(!fitToWindowAct->isChecked());
-    zoomOutAct->setEnabled(!fitToWindowAct->isChecked());
-    normalSizeAct->setEnabled(!fitToWindowAct->isChecked());
-    closeFolderAct->setEnabled(!listWidget->isHidden());
+    QFileDialog dialog(this, tr("Open File"),
+                       picturesLocations.isEmpty() ? QDir::currentPath() : picturesLocations.first());
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+    dialog.setMimeTypeFilters(mimeTypeFilters);
+    dialog.selectMimeTypeFilter("image/jpeg");
+
+    while (dialog.exec() == QDialog::Accepted && !loadFile(dialog.selectedFiles().first())) {}
 }
 
-void MainWindow::scaleImage(double factor)
+void MainWindow::saveAs()
 {
-    Q_ASSERT(imageLabel->pixmap());
-    scaleFactor *= factor;
-    imageLabel->resize(scaleFactor * imageLabel->pixmap()->size());
-
-    adjustScrollBar(scrollArea->horizontalScrollBar(), factor);
-    adjustScrollBar(scrollArea->verticalScrollBar(), factor);
-
-    zoomInAct->setEnabled(scaleFactor < 3.0);
-    zoomOutAct->setEnabled(scaleFactor > 0.333);
+    QFileDialog dialog(this, tr("Save File"), QDir::currentPath());
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setMimeTypeFilters(mimeTypeFilters);
+    dialog.selectMimeTypeFilter("image/jpeg");
+    dialog.selectFile(windowFilePath());
+    while (dialog.exec() == QDialog::Accepted && !openedImage->save(dialog.selectedFiles().first())) {}
 }
 
-void MainWindow::adjustScrollBar(QScrollBar *scrollBar, double factor)
+void MainWindow::saveImage()
 {
-    scrollBar->setValue(int(factor * scrollBar->value()
-                            + ((factor - 1) * scrollBar->pageStep()/2)));
+    openedImage->save(windowFilePath());
+    fileChanged=0;
+    updateMenus();
+}
+void MainWindow::closeFile()
+{
+    if(fileChanged && (QMessageBox::question(this, "Close file","Save Changes?",QMessageBox::Yes|QMessageBox::No)== QMessageBox::Yes))
+    {
+        this->saveImage();
+    }
+    fileOpened=false;
+    setWindowFilePath(QString());
+    imageLabel->setPixmap(QPixmap());
+    imageLabel->adjustSize();
+    updateMenus();
 }
 
-void MainWindow::showImage(QListWidgetItem* img)
+void MainWindow::deleteFile()
 {
-    QString tst = img->data(Qt::UserRole).toString();
-    loadFile(tst);
+
 }
 
 void MainWindow::deleteImage()
@@ -248,6 +216,47 @@ void MainWindow::deleteImage()
             curFile.remove();
         }
     }
+    updateMenus();
+}
+
+void MainWindow::openFolder()
+{
+    folderOpened = listWidget->readFolder();
+    setWindowFilePath(listWidget->getFolder());
+    updateMenus();
+}
+
+void MainWindow::closeFolder()
+{
+    listWidget->closeFolder();
+    folderOpened = false;
+    updateMenus();
+}
+
+void MainWindow::zoomIn()
+{
+    scaleImage(1.25);
+}
+
+void MainWindow::zoomOut()
+{
+    scaleImage(0.8);
+}
+
+void MainWindow::normalSize()
+{
+    imageLabel->adjustSize();
+    scaleFactor = 1.0;
+}
+
+void MainWindow::fitToWindow()
+{
+    bool fitToWindow = fitToWindowAct->isChecked();
+    scrollArea->setWidgetResizable(fitToWindow);
+    if (!fitToWindow) {
+        normalSize();
+    }
+    updateMenus();
 }
 
 void MainWindow::resizeImage()
@@ -262,6 +271,8 @@ void MainWindow::resizeImage()
         imageLabel->setPixmap(QPixmap::fromImage(*openedImage));
         imageLabel->adjustSize();
     }
+    fileChanged=1;
+    updateMenus();
 }
 
 void MainWindow::turnImage()
@@ -280,6 +291,8 @@ void MainWindow::turnImage()
     openedImage = new QImage(tmpImage);
     imageLabel->setPixmap(QPixmap::fromImage(*openedImage));
     imageLabel->adjustSize();
+    fileChanged=1;
+    updateMenus();
 }
 
 void MainWindow::uniteImages()
@@ -294,10 +307,74 @@ void MainWindow::uniteImages()
 
 void MainWindow::updateMenus()
 {
+    openFileAct->setEnabled(!fileOpened);
     closeFileAct->setEnabled(fileOpened);
+    saveFileAct->setEnabled(fileChanged && fileOpened);
+    saveFileAsAct->setEnabled(fileOpened);
     deleteAct->setEnabled(fileOpened);
+
+    openFolderAct->setEnabled(!folderOpened);
+    closeFolderAct->setEnabled(folderOpened);
+
+    zoomInAct->setEnabled(!fitToWindowAct->isChecked());
+    zoomOutAct->setEnabled(!fitToWindowAct->isChecked());
+    normalSizeAct->setEnabled(!fitToWindowAct->isChecked());
+    closeFolderAct->setEnabled(!listWidget->isHidden());
+
+
     resizeImageAct->setEnabled(fileOpened);
     turnMenu->setEnabled(fileOpened);
     turnLeftAct->setEnabled(fileOpened);
     turnRightAct->setEnabled(fileOpened);
+}
+
+
+void MainWindow::adjustScrollBar(QScrollBar *scrollBar, double factor)
+{
+    scrollBar->setValue(int(factor * scrollBar->value()
+                            + ((factor - 1) * scrollBar->pageStep()/2)));
+}
+
+void MainWindow::showImage(QListWidgetItem* img)
+{
+    QString tst = img->data(Qt::UserRole).toString();
+    loadFile(tst);
+}
+
+bool MainWindow::loadFile(const QString &fileName)
+{
+    openedImage = new QImage(fileName);
+    if (openedImage->isNull()) {
+        QMessageBox::information(this, QGuiApplication::applicationDisplayName(),
+                                 tr("Cannot load %1.").arg(QDir::toNativeSeparators(fileName)));
+        setWindowFilePath(QString());
+        imageLabel->setPixmap(QPixmap());
+        imageLabel->adjustSize();
+        return false;
+    }
+    imageLabel->setPixmap(QPixmap::fromImage(*openedImage));
+    scaleFactor = 1.0;
+
+    fitToWindowAct->setEnabled(true);
+
+    if (!fitToWindowAct->isChecked())
+         imageLabel->adjustSize();
+
+    fileOpened=true;
+    updateMenus();
+    setWindowFilePath(fileName);
+    return true;
+ }
+
+void MainWindow::scaleImage(double factor)
+{
+    Q_ASSERT(imageLabel->pixmap());
+    scaleFactor *= factor;
+    imageLabel->resize(scaleFactor * imageLabel->pixmap()->size());
+
+    adjustScrollBar(scrollArea->horizontalScrollBar(), factor);
+    adjustScrollBar(scrollArea->verticalScrollBar(), factor);
+
+    zoomInAct->setEnabled(scaleFactor < 3.0);
+    zoomOutAct->setEnabled(scaleFactor > 0.333);
 }
