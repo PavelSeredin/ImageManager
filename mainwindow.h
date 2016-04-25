@@ -2,6 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 
 
 class QSplitter;
@@ -19,6 +22,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     bool loadFile(const QString &);
+    void QtToCvStringTransform(QString qstr);
 
 private:
     void createActions();
@@ -54,6 +58,7 @@ private:
     QAction *turnLeftAct;
     QAction *turnRightAct;
     QAction *uniteImagesAct;
+    QAction *tiltCorrectionAct;
 
     QMenu *fileMenu;
     QMenu *viewMenu;
@@ -82,6 +87,7 @@ private slots:
     void resizeImage();
     void turnImage();
     void uniteImages();
+    void tiltCorrection();
 };
 
 #endif // MAINWINDOW_H

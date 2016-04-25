@@ -4,6 +4,8 @@
 #include "resizedialog.h"
 #include "unitedialog.h"
 
+using namespace cv;
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     fileChanged=0;
@@ -113,9 +115,14 @@ void MainWindow::createActions()
     uniteImagesAct->setDisabled(1);
     connect(uniteImagesAct,SIGNAL(triggered()),this,SLOT(uniteImages()));
 
+    tiltCorrectionAct = new QAction(tr("Tilt Correction"),this);
+    tiltCorrectionAct->setDisabled(1);
+    connect(tiltCorrectionAct,SIGNAL(triggered()),this,SLOT(tiltCorrection()));
+
     connect(listWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(showImage(QListWidgetItem*)));
     connect(listWidget,SIGNAL(hasSelectedItems(bool)),uniteImagesAct,SLOT(setEnabled(bool)));
     connect(listWidget,SIGNAL(hasSelectedItems(bool)),deleteAct,SLOT(setEnabled(bool)));
+    connect(listWidget,SIGNAL(hasSelectedItems(bool)),tiltCorrectionAct,SLOT(setEnabled(bool)));
 }
 
 void MainWindow::createMenus()
@@ -142,6 +149,7 @@ void MainWindow::createMenus()
     editMenu = new QMenu(tr("&Edit"),this);
     editMenu->addAction(resizeImageAct);
     editMenu->addAction(uniteImagesAct);
+    editMenu->addAction(tiltCorrectionAct);
 
     turnMenu = new QMenu(tr("Turn"),this);
     turnMenu->setDisabled(1);
@@ -325,6 +333,7 @@ void MainWindow::updateMenus()
     turnMenu->setEnabled(fileOpened);
     turnLeftAct->setEnabled(fileOpened);
     turnRightAct->setEnabled(fileOpened);
+    tiltCorrectionAct->setEnabled(fileOpened);
 }
 
 
@@ -376,4 +385,24 @@ void MainWindow::scaleImage(double factor)
 
     zoomInAct->setEnabled(scaleFactor < 3.0);
     zoomOutAct->setEnabled(scaleFactor > 0.333);
+}
+void MainWindow::QtToCvStringTransform(QString qstr)
+{
+   /* QChar c;
+    char cc;
+    //String pizdec(6,cc);
+    foreach(c,qstr)
+    {
+        cc = c.toLatin1();
+    }
+
+    //return String();*/
+}
+
+void MainWindow::tiltCorrection()
+{
+    Mat src = imread(windowFilePath().toStdString());
+    Mat dst;
+    Canny(src,dst,50,200,3);
+    imshow("dst",dst);
 }
