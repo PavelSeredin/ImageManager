@@ -1,7 +1,7 @@
 #ifndef FILESLIST_H
 #define FILESLIST_H
 
-#include <QListWidget.h>
+#include "QListWidget"
 
 class QDir;
 
