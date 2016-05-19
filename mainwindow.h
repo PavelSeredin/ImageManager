@@ -22,7 +22,6 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     bool loadFile(const QString &);
-    void QtToCvStringTransform(QString qstr);
 
 private:
     void createActions();

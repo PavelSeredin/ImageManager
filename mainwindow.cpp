@@ -196,6 +196,7 @@ void MainWindow::closeFile()
     {
         this->saveImage();
     }
+    openedImage->~QImage();
     fileOpened=false;
     setWindowFilePath(QString());
     imageLabel->setPixmap(QPixmap());
@@ -386,23 +387,52 @@ void MainWindow::scaleImage(double factor)
     zoomInAct->setEnabled(scaleFactor < 3.0);
     zoomOutAct->setEnabled(scaleFactor > 0.333);
 }
-void MainWindow::QtToCvStringTransform(QString qstr)
-{
-   /* QChar c;
-    char cc;
-    //String pizdec(6,cc);
-    foreach(c,qstr)
-    {
-        cc = c.toLatin1();
-    }
-
-    //return String();*/
-}
 
 void MainWindow::tiltCorrection()
 {
-    Mat src = imread(windowFilePath().toStdString());
-    Mat dst;
-    Canny(src,dst,50,200,3);
-    imshow("dst",dst);
+    QImage srcImg = openedImage->convertToFormat(QImage::Format_RGB32);
+    cv::Mat src( srcImg.height(), srcImg.width(), CV_8UC4, const_cast<uchar*>(srcImg.bits()), srcImg.bytesPerLine() );
+    //imshow("opened",src);
+
+    Mat src_scaled = Mat::zeros((500.0*src.rows)/src.cols, 500, src.type());
+
+    Point center = Point(0,0);
+    double scale = 500.0/src.cols;
+
+    Mat mat_scale = getRotationMatrix2D(center,0.0,scale);
+
+    warpAffine(src, src_scaled, mat_scale, src_scaled.size());
+    //imshow("scaled",src_scaled);
+
+    Mat canny=Mat::zeros(src_scaled.rows,src_scaled.cols,src_scaled.type());
+    Canny(src_scaled,canny,50,200);
+    //imshow("canny",canny);
+
+    std::vector<Vec4i> lines;
+    HoughLinesP(canny, lines, 1, CV_PI/180, 50, 50, 10 );
+    float tiltangle = 0.0;
+    for( size_t i = 0; i < lines.size(); i++ )
+    {
+      Vec4i l = lines[i];
+      if(l[0]==l[2])
+          continue;
+      if(l[1]==l[3])
+          continue;
+      float tg = 1.0*(l[1]-l[3])/(l[0]-l[2]);
+      float angle = (180.0*qAtan(tg))/CV_PI;
+      int K=0;
+      if(tg<-1)
+         K=1;
+      if(tg>1)
+          K=-1;
+      tiltangle+=angle + K*90;
+    }
+    tiltangle/=lines.size();
+
+    center= Point(src.cols/2,src.rows/2);
+    Mat mat_tilt = getRotationMatrix2D(center,tiltangle,1.0);
+    Mat result = Mat::zeros(src.rows,src.cols,src.type());
+    warpAffine(src,result,mat_tilt,result.size());
+    imshow("result",result);
+
 }
