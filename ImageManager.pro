@@ -18,5 +18,20 @@ HEADERS += \
 RESOURCES += \
     tools.qrc
 
-INCLUDEPATH+= /usr/local/include
-LIBS += -L/usr/local/lib -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_imgproc
+unix{
+    INCLUDEPATH+= /usr/local/include
+    LIBS += -L/usr/local/lib \
+    -lopencv_core \
+    -lopencv_imgcodecs \
+    -lopencv_highgui \
+    -lopencv_imgproc
+}
+
+win32{
+    INCLUDEPATH += C:/Qt/Tools/opencv_mingw/install/include
+    LIBS += -L"C:/Qt/Tools/opencv_mingw/install/x86/mingw/lib" \
+    -lopencv_core310 \
+    -lopencv_highgui310 \
+    -lopencv_imgproc310 \
+    -lopencv_imgcodecs310
+}
