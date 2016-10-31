@@ -15,12 +15,14 @@ class QLabel;
 class QAction;
 class QMenu;
 class FilesList;
+class QThread;
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
     explicit MainWindow(QWidget *parent = 0);
+    ~MainWindow();
     bool loadFile(const QString &);
 
 private:
@@ -40,6 +42,7 @@ private:
     bool fileOpened,folderOpened,fileChanged;
     QStringList mimeTypeFilters;
     QStringList picturesLocations;
+    //QThread *workThread;
 
     QAction *openFileAct;
     QAction *closeFileAct;
