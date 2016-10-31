@@ -27,15 +27,19 @@ private slots:
     void listDelete();
     void showGidSize(int);
     void updatePreview();
+    void saveImage();
+
 private:
     QTabWidget *tabWidget;
     QLabel *previewLabel,*gridSizeLabel;
     QComboBox *layoutComboBox, *modeComboBox;
-    QPushButton *mvUpButton, *mvDownButton, *deleteButton, *addButton;
+    QPushButton *mvUpButton, *mvDownButton, *deleteButton, *saveButton, *updateButton;
     QSpinBox *xSpinBox, *ySpinBox;
     QListWidget *filesList;
     QFrame *gridSizeFrame;
-    QList<QImage*> images;
+    QImage *previewImage;
+
+
 };
 
 #endif // UNITEDIALOG_H
