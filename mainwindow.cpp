@@ -122,7 +122,6 @@ void MainWindow::createActions()
     connect(listWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(showImage(QListWidgetItem*)));
     connect(listWidget,SIGNAL(hasSelectedItems(bool)),uniteImagesAct,SLOT(setEnabled(bool)));
     connect(listWidget,SIGNAL(hasSelectedItems(bool)),deleteAct,SLOT(setEnabled(bool)));
-    connect(listWidget,SIGNAL(hasSelectedItems(bool)),tiltCorrectionAct,SLOT(setEnabled(bool)));
 }
 
 void MainWindow::createMenus()
@@ -190,14 +189,17 @@ void MainWindow::saveImage()
     fileChanged=0;
     updateMenus();
 }
+
 void MainWindow::closeFile()
 {
     if(fileChanged && (QMessageBox::question(this, "Close file","Save Changes?",QMessageBox::Yes|QMessageBox::No)== QMessageBox::Yes))
     {
         this->saveImage();
     }
-    openedImage->~QImage();
+    delete openedImage;
+    openedImage=NULL;
     fileOpened=false;
+    fileChanged=false;
     setWindowFilePath(QString());
     imageLabel->setPixmap(QPixmap());
     imageLabel->adjustSize();
@@ -275,7 +277,7 @@ void MainWindow::resizeImage()
     if(rD.exec() == QDialog::Accepted)
     {
         QImage tmpImage = openedImage->scaled(*imageNewSize,Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
-        openedImage->~QImage();
+        delete openedImage;
         openedImage = new QImage(tmpImage);
         imageLabel->setPixmap(QPixmap::fromImage(*openedImage));
         imageLabel->adjustSize();
@@ -289,14 +291,14 @@ void MainWindow::turnImage()
     QMatrix matrix;
     if(this->sender()==turnLeftAct)
     {
-        matrix.rotate(90);
+        matrix.rotate(-90);
     }
     else
     {
-        matrix.rotate(-90);
+        matrix.rotate(90);
     }
     QImage tmpImage = openedImage->transformed(matrix);
-    openedImage->~QImage();
+    delete openedImage;
     openedImage = new QImage(tmpImage);
     imageLabel->setPixmap(QPixmap::fromImage(*openedImage));
     imageLabel->adjustSize();
@@ -310,6 +312,10 @@ void MainWindow::uniteImages()
     QListIterator<QListWidgetItem*> it(imagesToUnite);
     UniteDialog uD(it,this);
     uD.exec();
+    foreach (QListWidgetItem* iter, imagesToUnite)
+    {
+        delete iter;
+    }
 
 
 }
@@ -330,13 +336,13 @@ void MainWindow::updateMenus()
     closeFolderAct->setEnabled(!listWidget->isHidden());
 
 
+    uniteImagesAct->setEnabled(folderOpened);
     resizeImageAct->setEnabled(fileOpened);
     turnMenu->setEnabled(fileOpened);
     turnLeftAct->setEnabled(fileOpened);
     turnRightAct->setEnabled(fileOpened);
     tiltCorrectionAct->setEnabled(fileOpened);
 }
-
 
 void MainWindow::adjustScrollBar(QScrollBar *scrollBar, double factor)
 {
@@ -352,6 +358,7 @@ void MainWindow::showImage(QListWidgetItem* img)
 
 bool MainWindow::loadFile(const QString &fileName)
 {
+    delete openedImage;
     openedImage = new QImage(fileName);
     if (openedImage->isNull()) {
         QMessageBox::information(this, QGuiApplication::applicationDisplayName(),
@@ -433,6 +440,19 @@ void MainWindow::tiltCorrection()
     Mat mat_tilt = getRotationMatrix2D(center,tiltangle,1.0);
     Mat result = Mat::zeros(src.rows,src.cols,src.type());
     warpAffine(src,result,mat_tilt,result.size());
-    imshow("result",result);
+
+    delete openedImage;
+    openedImage = new QImage((uchar*) result.data, result.cols, result.rows, result.step, QImage::Format_ARGB32);
+
+    imageLabel->setPixmap(QPixmap::fromImage(*openedImage));
+    imageLabel->adjustSize();
+    fileChanged=1;
+    updateMenus();
+    //imshow("result",result);
+
+}
+
+MainWindow::~MainWindow()
+{
 
 }
