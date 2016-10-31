@@ -6,6 +6,7 @@
 
 FilesList::FilesList(QWidget *parent) : QListWidget(parent)
 {
+
     filters << "*.jpg" << "*.png";
     this->setSelectionMode(QAbstractItemView::ExtendedSelection);
     this->setMinimumWidth(300);
@@ -26,7 +27,8 @@ bool FilesList::readFolder()
     {
         QMessageBox::information(this, QGuiApplication::applicationDisplayName(),
                                  tr("Folder %1. is empty").arg(QDir::toNativeSeparators(imagesFolder->absolutePath())));
-        imagesFolder->~QDir();
+        delete imagesFolder;
+        imagesFolder=NULL;
         return 0;
     }
     QListIterator<QFileInfo> i(imagesList);
@@ -37,7 +39,7 @@ bool FilesList::readFolder()
         QListWidgetItem* it = new QListWidgetItem(cur.fileName(),this);
         it->setIcon(QPixmap::fromImage(img->scaled(800,600).scaled(100,75,Qt::IgnoreAspectRatio,Qt::SmoothTransformation)));
         it->setData(Qt::UserRole,cur.absoluteFilePath());
-
+        delete img;
     }
 
     connect(this,SIGNAL(itemSelectionChanged()),this,SLOT(upateSelectionSignal()));
@@ -50,7 +52,8 @@ void FilesList::closeFolder()
 {
     this->hide();
     this->clear();
-    imagesFolder->~QDir();
+    delete imagesFolder;
+    imagesFolder=NULL;
 }
 
 void FilesList::upateSelectionSignal()
